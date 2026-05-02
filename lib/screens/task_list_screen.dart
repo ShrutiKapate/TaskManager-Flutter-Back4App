@@ -39,11 +39,42 @@ class _TaskListScreenState extends State<TaskListScreen> {
     });
   }
 
+  /// Confirms and deletes a task.
+  Future<void> _confirmAndDelete(ParseObject task) async {
+    final title = task.get<String>('title') ?? '(untitled)';
+    final shouldDelete = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete task?'),
+        content: Text('Are you sure you want to delete "$title"? This cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldDelete == true) {
+      await _deleteTask(task);
+    }
+  }
+
   Future<void> _deleteTask(ParseObject task) async {
     final response = await task.delete();
+    if (!mounted) return;
     if (response.success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Task deleted')),
+      );
       _loadTasks();
-    } else if (mounted) {
+    } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Delete failed: ${response.error?.message}')),
       );
@@ -114,6 +145,27 @@ class _TaskListScreenState extends State<TaskListScreen> {
                           child: const Icon(Icons.delete, color: Colors.white),
                         ),
                         direction: DismissDirection.endToStart,
+                        confirmDismiss: (_) async {
+                          final title = task.get<String>('title') ?? '(untitled)';
+                          return await showDialog<bool>(
+                            context: context,
+                            builder: (ctx) => AlertDialog(
+                              title: const Text('Delete task?'),
+                              content: Text('Are you sure you want to delete "$title"?'),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.of(ctx).pop(false),
+                                  child: const Text('Cancel'),
+                                ),
+                                FilledButton(
+                                  style: FilledButton.styleFrom(backgroundColor: Colors.red),
+                                  onPressed: () => Navigator.of(ctx).pop(true),
+                                  child: const Text('Delete'),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
                         onDismissed: (_) => _deleteTask(task),
                         child: ListTile(
                           leading: Checkbox(
@@ -129,6 +181,11 @@ class _TaskListScreenState extends State<TaskListScreen> {
                             ),
                           ),
                           subtitle: Text(task.get<String>('description') ?? ''),
+                          trailing: IconButton(
+                            icon: const Icon(Icons.delete_outline, color: Colors.red),
+                            tooltip: 'Delete task',
+                            onPressed: () => _confirmAndDelete(task),
+                          ),
                           onTap: () => _openEditor(task: task),
                         ),
                       );

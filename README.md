@@ -180,4 +180,4 @@ await task.delete();
 
 ## Author
 
-**Shruti Kapate** — BITS Pilani WILP, Introduction to App Development (Assignment 2)
+**Shruti Kapate** — BITS Pilani WILP, Introduction to Cross Platform Application Development (Assignment 1)
